@@ -1,0 +1,80 @@
+<h2 id="file-events">File Events</h2>
+<p>
+     To keep all your computers in sync, Dropbox watches your file system for any changes within your Dropbox folder. Unfortunately, in many cases the file events received are too coarse to be presentable to non-savvy users, usually just an <code>ADD</code> event for any new file and a <code>DEL</code> event for any file that went missing.
+</p>
+
+<p>
+    You'll be given a list of <code>ADD</code>/<code>DEL</code> file events that should be processed and turned into a human-readable event feed that includes richer events like file and directory renames, moves, and copies.
+</p>
+<h3>Input</h3>
+<p>
+   Your program must read an integer <strong>N</strong> (1 &lt;= <strong>N</strong> &lt;= 50000) from <code>STDIN</code> representing the number of file events in the test input, followed by that many file event rows.
+  Each row will have the file event type, a UNIX timestamp of when the event occurred, the path of the file relative to the Dropbox root, and an 8-character hash of the contents (or former contents) of the file. Each row is separated by a space. No file paths include spaces. Directories are files too and may be empty (they'll have "-" as their file hash).
+</p>
+<h3>Output</h3>
+<p>
+   Your output should be a series of English sentences to <code>stdout</code>, one per line, in some way describing the file events in a user-friendly manner. There is no objectively
+   'right' answer here, and in fact there may be multiple ways to interpret a provided list of file events. We'll be judging submissions on a number of criteria
+   including raw efficiency, friendliness of output, ability to handle ambiguity, and more. As one example, the sample output below is (probably) the correct
+   interpretation of the input file events, but is not particularly user-friendly. Feel free to deviate substantially from the sample.
+</p>
+<table class="in-out-table">
+<tr>
+   <td>
+      <h5>Sample Input</h5>
+          <pre class="code-sample">
+6
+ADD 1282352346 /test -
+ADD 1282353016 /test/1.txt f2fa762f
+DEL 1282354012 /test -
+DEL 1282354012 /test/1.txt f2fa762f
+ADD 1282354013 /test2 -
+ADD 1282354013 /test2/1.txt f2fa762f
+</pre>
+      </td>
+   <td>
+                <h5>Sample Output</h5>
+                <pre class="code-sample">
+Added dir /test.
+Added file /test/1.txt.
+Renamed dir /test -> /test2.
+</pre>
+
+Source: https://www.dropbox.com/jobs/challenges#file-events
+
+
+SOURCE DIR
+----------
+./src/main/java
+
+TEST INPUT FOLDER
+-----------------
+./test
+
+REQUIREMENTS
+------------
+!) JDK 6 or above
+2) Mac OsX or Linux with a bash shell 
+
+
+BUILD
+-----
+./run.sh clean install
+
+The above command does the following:
+
+1) Clean generated target and doc if exists.
+2) Generate class files
+3) Build jar from class files
+4) Geneate Java doc
+
+check ./run.sh help for more details.
+
+RUNNING
+-------
+./run.sh
+
+The above command will start the program and will wait for input from stdin. Test input files are provided under test folder.
+
+Example:
+./run.sh < test/testInput.txt

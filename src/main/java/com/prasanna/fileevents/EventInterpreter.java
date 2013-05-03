@@ -135,19 +135,21 @@ public class EventInterpreter
                 else
                     emptyStackAndAddNewEvent(event);
             }
-            else
+            else if (isNewEventHistory(event))
             {
-                if (lastLoggedEvent != null
-                                && (!lastLoggedEvent.isDirectoryEvent()
-                                                || !lastLoggedEvent.getEventType().equals(EventType.DEL) || !event
-                                                    .isUnderParent(lastLoggedEvent.getPath())))
-                {
-                    List<Event> dirEventHistory = new ArrayList<Event>();
-                    dirEventHistory.add(event);
-                    eventStack.push(dirEventHistory);
-                }
+                List<Event> dirEventHistory = new ArrayList<Event>();
+                dirEventHistory.add(event);
+                eventStack.push(dirEventHistory);
             }
         }
+    }
+
+    private boolean isNewEventHistory(Event event)
+    {
+        return lastLoggedEvent != null
+                        && (!lastLoggedEvent.isDirectoryEvent()
+                                        || !lastLoggedEvent.getEventType().equals(EventType.DEL) || !event
+                                            .isUnderParent(lastLoggedEvent.getPath()));
     }
 
     private void processRemainingInStack()

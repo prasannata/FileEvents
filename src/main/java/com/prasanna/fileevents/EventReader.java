@@ -18,114 +18,106 @@ import java.util.regex.Pattern;
  */
 public class EventReader
 {
-	private final InputStream inputStream;
-	private final BufferedReader reader;
-	private final static String eventInputPattern = "(^add|del)\\s+(\\d+)\\s+(/[^\\$/\\^\\*%#@!\\(\\);:\\\\<>\\?\\,\\&]+[/[^\\$/\\^\\*%#@!\\(\\);:\\\\<>\\?\\,\\&]*]*)\\s+(\\w{8}|\\-$)";
-	private final Pattern pattern;
+    private final InputStream inputStream;
+    private final BufferedReader reader;
+    private final static String eventInputPattern = "(^add|del)\\s+(\\d+)\\s+(/[^\\$/\\^\\*%#@!\\(\\);:\\\\<>\\?\\,\\&]+[/[^\\$/\\^\\*%#@!\\(\\);:\\\\<>\\?\\,\\&]*]*)\\s+(\\w{8}|\\-$)";
+    private final Pattern pattern;
 
-	public EventReader(InputStream inputStream)
-	{
-		if (inputStream == null)
-		{
-			throw new IllegalArgumentException("Cannot initialize reader without input stream");
-		}
+    public EventReader(InputStream inputStream)
+    {
+        if (inputStream == null)
+            throw new IllegalArgumentException("Cannot initialize reader without input stream");
 
-		this.inputStream = inputStream;
-		reader = new BufferedReader(new InputStreamReader(this.inputStream));
-		pattern = Pattern.compile(eventInputPattern, Pattern.CASE_INSENSITIVE);
-	}
+        this.inputStream = inputStream;
+        reader = new BufferedReader(new InputStreamReader(this.inputStream));
+        pattern = Pattern.compile(eventInputPattern, Pattern.CASE_INSENSITIVE);
+    }
 
-	public List<Event> read()
-	{
-		List<Event> events = new ArrayList<Event>();
-		Event lastEvent = null;
-		int numEvents = readNumEvents();
+    public List<Event> read()
+    {
+        List<Event> events = new ArrayList<Event>();
+        Event lastEvent = null;
+        int numEvents = readNumEvents();
 
-		while (numEvents > 0)
-		{
-			try
-			{
-				String inputEvent = reader.readLine();
-				Event event = parse(inputEvent);
-				if (event != null)
-				{
-					if (lastEvent == null || isChronological(lastEvent, event))
-					{
-						events.add(event);
-					}
-				}
-				lastEvent = event;
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
+        while (numEvents > 0)
+        {
+            try
+            {
+                String inputEvent = reader.readLine();
+                Event event = parse(inputEvent);
+                if (event != null && (lastEvent == null || isChronological(lastEvent, event)))
+                    events.add(event);
 
-			numEvents--;
-		}
+                lastEvent = event;
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
 
-		return events;
-	}
+            numEvents--;
+        }
 
-	private boolean isChronological(Event lastEvent, Event event)
-	{
-		return lastEvent != null && event.getTimestamp() >= lastEvent.getTimestamp();
-	}
+        return events;
+    }
 
-	public Event parse(String text)
-	{
-		Event event = null;
-		Matcher matcher = pattern.matcher(text);
+    private boolean isChronological(Event lastEvent, Event event)
+    {
+        return lastEvent != null && event.getTimestamp() >= lastEvent.getTimestamp();
+    }
 
-		if (matcher.find())
-		{
-			if (matcher.groupCount() == 4)
-			{
-				event = new Event();
-				event.setEventType(EventType.valueOf(matcher.group(1)));
-				event.setTimestamp(Long.valueOf(matcher.group(2)));
-				event.setPath(matcher.group(3));
-				event.setContentHash(matcher.group(4));
-			}
-		}
-		return event;
-	}
+    public Event parse(String text)
+    {
+        Event event = null;
+        Matcher matcher = pattern.matcher(text);
 
-	private int readNumEvents()
-	{
-		String numEventsInStr = null;
-		int numEvents = 0;
+        if (matcher.find() && matcher.groupCount() == 4)
+        {
+            event = new Event();
+            event.setEventType(EventType.valueOf(matcher.group(1)));
+            event.setTimestamp(Long.valueOf(matcher.group(2)));
+            event.setPath(matcher.group(3));
+            event.setContentHash(matcher.group(4));
+        }
 
-		try
-		{
-			numEventsInStr = reader.readLine();
-			numEvents = Integer.parseInt(numEventsInStr);
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
-		}
-		catch (NumberFormatException e)
-		{
-		}
+        return event;
+    }
 
-		return numEvents;
-	}
+    private int readNumEvents()
+    {
+        String numEventsInStr = null;
+        int numEvents = 0;
 
-	@Override
-	public void finalize()
-	{
-		if (reader != null)
-		{
-			try
-			{
-				reader.close();
-			}
-			catch (IOException e)
-			{
-				System.out.println("Failed to close input stream.");
+        try
+        {
+            numEventsInStr = reader.readLine();
+            numEvents = Integer.parseInt(numEventsInStr);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        catch (NumberFormatException e)
+        {
+        }
 
-			}
-		}
-	}
+        return numEvents;
+    }
+
+    @Override
+    public void finalize()
+    {
+        if (reader != null)
+        {
+            try
+            {
+                reader.close();
+            }
+            catch (IOException e)
+            {
+                System.out.println("Failed to close input stream.");
+
+            }
+        }
+    }
 }

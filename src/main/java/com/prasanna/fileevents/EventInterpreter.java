@@ -209,69 +209,6 @@ public class EventInterpreter
         }
     }
 
-    private void detailFileOperation(List<Event> eventHistory)
-    {
-        Action action = null;
-        String newPath = null;
-        Event firstEvent = eventHistory.get(0);
-
-        for (int i = 1; i < eventHistory.size(); i++)
-        {
-            Event event = eventHistory.get(i);
-
-            if (event.getEventType().equals(EventType.ADD))
-            {
-                action = determineMoveOrRename(firstEvent, event);
-                newPath = event.getPath();
-            }
-        }
-
-        logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
-        lastLoggedEvent = firstEvent;
-    }
-
-    private void detailDirOperation(List<Event> eventHistory)
-    {
-        Action action = null;
-        String newPath = null;
-        Event firstEvent = eventHistory.get(0);
-
-        for (int i = 1; i < eventHistory.size(); i++)
-        {
-            Event event = eventHistory.get(i);
-
-            if (event.isDirectoryEvent())
-            {
-                if (event.getEventType().equals(EventType.ADD))
-                {
-                    action = determineMoveOrRename(firstEvent, event);
-                    newPath = event.getPath();
-                    break;
-                }
-            }
-        }
-
-        logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
-        lastLoggedEvent = firstEvent;
-    }
-
-    private Action determineMoveOrRename(Event firstEvent, Event event)
-    {
-        Action action;
-
-        if (firstEvent.getParentPath().equals(event.getParentPath()))
-            action = Action.RENAMED;
-        else
-            action = Action.MOVED;
-
-        return action;
-    }
-
-    private Action getActionString(EventType eventType)
-    {
-        return eventType.equals(EventType.ADD) ? Action.ADDED : Action.DELETED;
-    }
-
     private boolean isADirOperation(List<Event> eventHistory)
     {
         boolean isADirOperation = false;
@@ -336,20 +273,76 @@ public class EventInterpreter
 
     private boolean isAFileOperation(List<Event> eventHistory)
     {
-        boolean isAFileOperation = false;
-
         if (!eventHistory.get(0).isDirectoryEvent() && eventHistory.size() == 2)
         {
-            for (int i = 1; i < eventHistory.size(); i++)
-            {
-                if (!eventHistory.get(i).getContentHash().equals(eventHistory.get(0).getContentHash()))
-                    break;
+            if (!eventHistory.get(1).getContentHash().equals(eventHistory.get(0).getContentHash()))
+                return true;
+        }
 
-                isAFileOperation = true;
+        return false;
+    }
+
+    private void detailFileOperation(List<Event> eventHistory)
+    {
+        Action action = null;
+        String newPath = null;
+        Event firstEvent = eventHistory.get(0);
+
+        for (int i = 1; i < eventHistory.size(); i++)
+        {
+            Event event = eventHistory.get(i);
+
+            if (event.getEventType().equals(EventType.ADD))
+            {
+                action = determineMoveOrRename(firstEvent, event);
+                newPath = event.getPath();
             }
         }
 
-        return isAFileOperation;
+        logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
+        lastLoggedEvent = firstEvent;
+    }
+
+    private void detailDirOperation(List<Event> eventHistory)
+    {
+        Action action = null;
+        String newPath = null;
+        Event firstEvent = eventHistory.get(0);
+
+        for (int i = 1; i < eventHistory.size(); i++)
+        {
+            Event event = eventHistory.get(i);
+
+            if (event.isDirectoryEvent())
+            {
+                if (event.getEventType().equals(EventType.ADD))
+                {
+                    action = determineMoveOrRename(firstEvent, event);
+                    newPath = event.getPath();
+                    break;
+                }
+            }
+        }
+
+        logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
+        lastLoggedEvent = firstEvent;
+    }
+
+    private Action determineMoveOrRename(Event firstEvent, Event event)
+    {
+        Action action;
+
+        if (firstEvent.getParentPath().equals(event.getParentPath()))
+            action = Action.RENAMED;
+        else
+            action = Action.MOVED;
+
+        return action;
+    }
+
+    private Action getActionString(EventType eventType)
+    {
+        return eventType.equals(EventType.ADD) ? Action.ADDED : Action.DELETED;
     }
 
     public boolean isAPossibleMoveOrRename(Event event)

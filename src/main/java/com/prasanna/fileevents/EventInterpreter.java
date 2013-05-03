@@ -8,8 +8,8 @@ import java.util.Stack;
 
 /**
  * <p>
- * Given a list of events, based on the input sequence, interprets the final
- * action for a particular file and logs it using the Logger.
+ * Given a list of events, based on its sequence, interprets the final action
+ * for a particular file and logs it using the Logger.
  * </p>
  * 
  * <p>
@@ -71,370 +71,338 @@ import java.util.Stack;
  */
 public class EventInterpreter
 {
-	private Stack<List<Event>> eventStack = new Stack<List<Event>>();
+    private Stack<List<Event>> eventStack = new Stack<List<Event>>();
 
-	private static final Logger logger = new Logger();
+    private static final Logger logger = new Logger();
 
-	private Event lastLoggedEvent = null;
+    private Event lastLoggedEvent = null;
 
-	public EventInterpreter()
-	{
-		logger.printHeader();
-	}
+    public EventInterpreter()
+    {
+        logger.printHeader();
+    }
 
-	public void interpret(List<Event> events)
-	{
-		if (events != null)
-		{
-			for (Event event : events)
-			{
-				interpretEvent(event);
-			}
+    public void interpret(List<Event> events)
+    {
+        if (events != null)
+        {
+            for (Event event : events)
+                interpretEvent(event);
 
-			processRemainingInStack();
-		}
-	}
+            processRemainingInStack();
+        }
+    }
 
-	private void processRemainingInStack()
-	{
-		while (eventStack.isEmpty() == false)
-		{
-			detailEvent(eventStack.pop());
-		}
-	}
+    private void interpretEvent(Event event)
+    {
+        if (event.getEventType().equals(EventType.DEL))
+            interpretDelEvent(event);
+        else
+            interpretAddEvent(event);
+    }
 
-	private void detailEvent(List<Event> eventHistory)
-	{
-		if (eventHistory.size() == 1)
-		{
-			Event event = eventHistory.get(0);
+    private void interpretAddEvent(Event event)
+    {
+        if (eventStack.isEmpty() == false)
+        {
+            if (isAPossibleMoveOrRename(event))
+            {
+                List<Event> dirEventHistory = eventStack.pop();
+                dirEventHistory.add(event);
+                eventStack.push(dirEventHistory);
+            }
+            else
+                emptyStackAndAddNewEvent(event);
+        }
+        else
+        {
+            logger.prettyLog(event, Action.ADDED, event.getPath());
+        }
+    }
 
-			logger.prettyLog(event, getActionString(event.getEventType()), event.getPath());
-			lastLoggedEvent = event;
-		}
-		else
-		{
-			if (isADirOperation(eventHistory))
-			{
-				detailDirOperation(eventHistory);
-			}
-			else if (isAFileOperation(eventHistory))
-			{
-				detailFileOperation(eventHistory);
-			}
-			else
-			{
-				Event previousEvent = null;
-				for (Event event : eventHistory)
-				{
-					if (previousEvent != null && previousEvent.isDirectoryEvent()
-					        && previousEvent.getEventType().equals(EventType.DEL)
-					        && previousEvent.getPath().equals(event.getParentPath()))
-					{
-						continue;
-					}
+    private void interpretDelEvent(Event event)
+    {
+        if (event.isDirectoryEvent())
+            emptyStackAndAddNewEvent(event);
+        else
+        {
+            if (eventStack.isEmpty() == false)
+            {
+                if (eventStack.peek().get(0).isDirectoryEvent()
+                                && eventStack.peek().get(0).getPath().equals(event.getParentPath()))
+                {
+                    List<Event> dirEventHistory = eventStack.pop();
+                    dirEventHistory.add(event);
+                    eventStack.push(dirEventHistory);
+                }
+                else
+                    emptyStackAndAddNewEvent(event);
+            }
+            else
+            {
+                if (lastLoggedEvent != null
+                                && (!lastLoggedEvent.isDirectoryEvent()
+                                                || !lastLoggedEvent.getEventType().equals(EventType.DEL) || !event
+                                                    .isUnderParent(lastLoggedEvent.getPath())))
+                {
+                    List<Event> dirEventHistory = new ArrayList<Event>();
+                    dirEventHistory.add(event);
+                    eventStack.push(dirEventHistory);
+                }
+            }
+        }
+    }
 
-					logger.prettyLog(event, getActionString(event.getEventType()), event.getPath());
-					previousEvent = event;
-					lastLoggedEvent = event;
-				}
-			}
-		}
-	}
+    private void processRemainingInStack()
+    {
+        while (eventStack.isEmpty() == false)
+            detailEvent(eventStack.pop());
+    }
 
-	private void detailFileOperation(List<Event> eventHistory)
-	{
-		Action action = null;
-		String newPath = null;
-		Event firstEvent = eventHistory.get(0);
+    private void emptyStackAndAddNewEvent(Event event)
+    {
+        processRemainingInStack();
 
-		for (int i = 1; i < eventHistory.size(); i++)
-		{
-			Event event = eventHistory.get(i);
+        if (lastLoggedEvent == null || !lastLoggedEvent.isDirectoryEvent()
+                        || !lastLoggedEvent.getEventType().equals(EventType.DEL)
+                        || !event.getEventType().equals(EventType.DEL)
+                        || !event.isUnderParent(lastLoggedEvent.getPath()))
+        {
+            List<Event> dirEventHistory = new ArrayList<Event>();
+            dirEventHistory.add(event);
+            eventStack.push(dirEventHistory);
+        }
+    }
 
-			if (event.getEventType().equals(EventType.ADD))
-			{
-				action = determineMoveOrRename(firstEvent, event);
-				newPath = event.getPath();
-			}
-		}
+    private void detailEvent(List<Event> eventHistory)
+    {
+        if (eventHistory.size() == 1)
+        {
+            Event event = eventHistory.get(0);
 
-		logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
-		lastLoggedEvent = firstEvent;
-	}
+            logger.prettyLog(event, getActionString(event.getEventType()), event.getPath());
+            lastLoggedEvent = event;
+        }
+        else
+        {
+            if (isADirOperation(eventHistory))
+                detailDirOperation(eventHistory);
+            else if (isAFileOperation(eventHistory))
+                detailFileOperation(eventHistory);
+            else
+            {
+                Event previousEvent = null;
+                for (Event event : eventHistory)
+                {
+                    if (previousEvent != null && previousEvent.isDirectoryEvent()
+                                    && previousEvent.getEventType().equals(EventType.DEL)
+                                    && previousEvent.getPath().equals(event.getParentPath()))
+                    {
+                        continue;
+                    }
 
-	private void detailDirOperation(List<Event> eventHistory)
-	{
-		Action action = null;
-		String newPath = null;
-		Event firstEvent = eventHistory.get(0);
+                    logger.prettyLog(event, getActionString(event.getEventType()), event.getPath());
+                    previousEvent = event;
+                    lastLoggedEvent = event;
+                }
+            }
+        }
+    }
 
-		for (int i = 1; i < eventHistory.size(); i++)
-		{
-			Event event = eventHistory.get(i);
+    private void detailFileOperation(List<Event> eventHistory)
+    {
+        Action action = null;
+        String newPath = null;
+        Event firstEvent = eventHistory.get(0);
 
-			if (event.isDirectoryEvent())
-			{
-				if (event.getEventType().equals(EventType.ADD))
-				{
-					action = determineMoveOrRename(firstEvent, event);
-					newPath = event.getPath();
-					break;
-				}
-			}
-		}
+        for (int i = 1; i < eventHistory.size(); i++)
+        {
+            Event event = eventHistory.get(i);
 
-		logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
-		lastLoggedEvent = firstEvent;
-	}
+            if (event.getEventType().equals(EventType.ADD))
+            {
+                action = determineMoveOrRename(firstEvent, event);
+                newPath = event.getPath();
+            }
+        }
 
-	private Action determineMoveOrRename(Event firstEvent, Event event)
-	{
-		Action action;
+        logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
+        lastLoggedEvent = firstEvent;
+    }
 
-		if (firstEvent.getParentPath().equals(event.getParentPath()))
-		{
-			action = Action.RENAMED;
-		}
-		else
-		{
-			action = Action.MOVED;
-		}
+    private void detailDirOperation(List<Event> eventHistory)
+    {
+        Action action = null;
+        String newPath = null;
+        Event firstEvent = eventHistory.get(0);
 
-		return action;
-	}
+        for (int i = 1; i < eventHistory.size(); i++)
+        {
+            Event event = eventHistory.get(i);
 
-	private Action getActionString(EventType eventType)
-	{
-		return eventType.equals(EventType.ADD) ? Action.ADDED : Action.DELETED;
-	}
+            if (event.isDirectoryEvent())
+            {
+                if (event.getEventType().equals(EventType.ADD))
+                {
+                    action = determineMoveOrRename(firstEvent, event);
+                    newPath = event.getPath();
+                    break;
+                }
+            }
+        }
 
-	private boolean isADirOperation(List<Event> eventHistory)
-	{
-		boolean isADirOperation = false;
-		Map<String, Event> delFileContentMap = new HashMap<String, Event>();
+        logger.prettyLog(firstEvent, action, firstEvent.getPath() + " to " + newPath);
+        lastLoggedEvent = firstEvent;
+    }
 
-		String newDirPath = null;
-		String oldDirPath = null;
+    private Action determineMoveOrRename(Event firstEvent, Event event)
+    {
+        Action action;
 
-		for (Event event : eventHistory)
-		{
-			if (event.getEventType().equals(EventType.DEL))
-			{
-				if (event.isDirectoryEvent())
-				{
-					oldDirPath = event.getPath();
-				}
+        if (firstEvent.getParentPath().equals(event.getParentPath()))
+            action = Action.RENAMED;
+        else
+            action = Action.MOVED;
 
-				delFileContentMap.put(event.getContentHash(), event);
-			}
-			else
-			{
-				Event deletedEvent = delFileContentMap.remove(event.getContentHash());
-				if (deletedEvent == null)
-				{
-					isADirOperation = false;
-					break;
-				}
-				else
-				{
-					if (event.isDirectoryEvent())
-					{
-						newDirPath = event.getPath();
-					}
-					else
-					{
-						if (oldDirPath == null || newDirPath == null)
-						{
-							isADirOperation = false;
-							break;
-						}
+        return action;
+    }
 
-						if (deletedEvent.getPath().replaceFirst(oldDirPath, newDirPath)
-						        .equals(event.getPath()) == false)
-						{
-							isADirOperation = false;
-							break;
-						}
-					}
-				}
-			}
+    private Action getActionString(EventType eventType)
+    {
+        return eventType.equals(EventType.ADD) ? Action.ADDED : Action.DELETED;
+    }
 
-			isADirOperation = true;
-		}
+    private boolean isADirOperation(List<Event> eventHistory)
+    {
+        boolean isADirOperation = false;
+        Map<String, Event> delFileContentMap = new HashMap<String, Event>();
 
-		logLeftContentsInMap(delFileContentMap);
-		return isADirOperation;
-	}
+        String newDirPath = null;
+        String oldDirPath = null;
 
-	private void logLeftContentsInMap(Map<String, Event> delFileContentMap)
-	{
-		for (Map.Entry<String, Event> entrySet : delFileContentMap.entrySet())
-		{
-			logger.prettyLog(entrySet.getValue(), getActionString(entrySet.getValue()
-			        .getEventType()), entrySet.getValue().getPath());
-		}
-	}
+        for (Event event : eventHistory)
+        {
+            if (event.getEventType().equals(EventType.DEL))
+            {
+                if (event.isDirectoryEvent())
+                    oldDirPath = event.getPath();
 
-	private boolean isAFileOperation(List<Event> eventHistory)
-	{
-		boolean isAFileOperation = false;
+                delFileContentMap.put(event.getContentHash(), event);
+            }
+            else
+            {
+                Event deletedEvent = delFileContentMap.remove(event.getContentHash());
+                if (deletedEvent == null)
+                {
+                    isADirOperation = false;
+                    break;
+                }
+                else
+                {
+                    if (event.isDirectoryEvent())
+                        newDirPath = event.getPath();
+                    else
+                    {
+                        if (oldDirPath == null || newDirPath == null)
+                        {
+                            isADirOperation = false;
+                            break;
+                        }
 
-		if (eventHistory.get(0).isDirectoryEvent() == false && eventHistory.size() == 2)
-		{
-			for (int i = 1; i < eventHistory.size(); i++)
-			{
-				if (eventHistory.get(i).getContentHash()
-				        .equals(eventHistory.get(0).getContentHash()) == false)
-				{
-					break;
-				}
+                        if (deletedEvent.getPath().replaceFirst(oldDirPath, newDirPath).equals(event.getPath()) == false)
+                        {
+                            isADirOperation = false;
+                            break;
+                        }
+                    }
+                }
+            }
 
-				isAFileOperation = true;
-			}
-		}
+            isADirOperation = true;
+        }
 
-		return isAFileOperation;
-	}
+        logLeftContentsInMap(delFileContentMap);
+        return isADirOperation;
+    }
 
-	private void interpretEvent(Event event)
-	{
-		if (event.getEventType().equals(EventType.DEL))
-		{
-			interpretDelEvent(event);
-		}
-		else
-		{
-			interpretAddEvent(event);
-		}
-	}
+    private void logLeftContentsInMap(Map<String, Event> delFileContentMap)
+    {
+        for (Map.Entry<String, Event> entrySet : delFileContentMap.entrySet())
+        {
+            logger.prettyLog(entrySet.getValue(), getActionString(entrySet.getValue().getEventType()), entrySet
+                            .getValue().getPath());
+        }
+    }
 
-	private void interpretDelEvent(Event event)
-	{
-		if (event.isDirectoryEvent())
-		{
-			emptyStackAndAddNewEvent(event);
-		}
-		else
-		{
-			if (eventStack.isEmpty() == false)
-			{
-				if (eventStack.peek().get(0).isDirectoryEvent()
-				        && eventStack.peek().get(0).getPath().equals(event.getParentPath()))
-				{
-					List<Event> dirEventHistory = eventStack.pop();
-					dirEventHistory.add(event);
-					eventStack.push(dirEventHistory);
-				}
-				else
-				{
-					emptyStackAndAddNewEvent(event);
-				}
-			}
-			else
-			{
-				if (lastLoggedEvent != null
-				        && (lastLoggedEvent.isDirectoryEvent() == false
-				                || lastLoggedEvent.getEventType().equals(EventType.DEL) == false || event
-				                .isUnderParent(lastLoggedEvent.getPath()) == false))
-				{
-					List<Event> dirEventHistory = new ArrayList<Event>();
-					dirEventHistory.add(event);
-					eventStack.push(dirEventHistory);
-				}
-			}
-		}
-	}
+    private boolean isAFileOperation(List<Event> eventHistory)
+    {
+        boolean isAFileOperation = false;
 
-	private void interpretAddEvent(Event event)
-	{
-		if (eventStack.isEmpty() == false)
-		{
-			if (isAPossibleMoveOrRename(event))
-			{
-				List<Event> dirEventHistory = eventStack.pop();
-				dirEventHistory.add(event);
-				eventStack.push(dirEventHistory);
-			}
-			else
-			{
-				emptyStackAndAddNewEvent(event);
-			}
-		}
-		else
-		{
-			logger.prettyLog(event, Action.ADDED, event.getPath());
-		}
-	}
+        if (!eventHistory.get(0).isDirectoryEvent() && eventHistory.size() == 2)
+        {
+            for (int i = 1; i < eventHistory.size(); i++)
+            {
+                if (!eventHistory.get(i).getContentHash().equals(eventHistory.get(0).getContentHash()))
+                    break;
 
-	public boolean isAPossibleMoveOrRename(Event event)
-	{
-		boolean isAPossibleMoveOrRename = false;
-		int size = eventStack.peek().size();
+                isAFileOperation = true;
+            }
+        }
 
-		if (size > 0)
-		{
-			Event firstEvent = eventStack.peek().get(0);
+        return isAFileOperation;
+    }
 
-			isAPossibleMoveOrRename = isAConsecutiveDirEvent(event);
+    public boolean isAPossibleMoveOrRename(Event event)
+    {
+        boolean isAPossibleMoveOrRename = false;
+        int size = eventStack.peek().size();
 
-			if (isAPossibleMoveOrRename == false)
-			{
-				Event lastDirEvent = null;
+        if (size > 0)
+        {
+            Event firstEvent = eventStack.peek().get(0);
 
-				for (int i = size - 1; i >= 0; i--)
-				{
-					Event lastEvent = eventStack.peek().get(i);
-					if (lastEvent.isDirectoryEvent())
-					{
-						lastDirEvent = lastEvent;
-						break;
-					}
+            isAPossibleMoveOrRename = isAConsecutiveDirEvent(event);
 
-				}
+            if (!isAPossibleMoveOrRename)
+            {
+                Event lastDirEvent = null;
 
-				if (event.isDirectoryEvent() == false && lastDirEvent != null
-				        && lastDirEvent.getPath().equals(event.getParentPath()))
-				{
-					for (Event historicalEvent : eventStack.peek())
-					{
-						if (historicalEvent.getContentHash().equals(event.getContentHash()))
-						{
-							isAPossibleMoveOrRename = true;
-						}
-					}
-				}
+                for (int i = size - 1; i >= 0; i--)
+                {
+                    Event lastEvent = eventStack.peek().get(i);
+                    if (lastEvent.isDirectoryEvent())
+                    {
+                        lastDirEvent = lastEvent;
+                        break;
+                    }
 
-				if (isAPossibleMoveOrRename == false)
-				{
-					isAPossibleMoveOrRename = (event.isDirectoryEvent() == false
-					        && firstEvent.isDirectoryEvent() == false && firstEvent
-					        .getContentHash().equals(event.getContentHash()));
-				}
-			}
-		}
+                }
 
-		return isAPossibleMoveOrRename;
-	}
+                if (!event.isDirectoryEvent() && lastDirEvent != null
+                                && lastDirEvent.getPath().equals(event.getParentPath()))
+                {
+                    for (Event historicalEvent : eventStack.peek())
+                    {
+                        if (historicalEvent.getContentHash().equals(event.getContentHash()))
+                            isAPossibleMoveOrRename = true;
+                    }
+                }
 
-	private boolean isAConsecutiveDirEvent(Event event)
-	{
-		return event.isDirectoryEvent() && eventStack.peek().get(0).isDirectoryEvent()
-		        && eventStack.peek().get(0).getEventType().equals(EventType.DEL);
-	}
+                if (!isAPossibleMoveOrRename)
+                {
+                    isAPossibleMoveOrRename = (!event.isDirectoryEvent() && !firstEvent.isDirectoryEvent() && firstEvent
+                                    .getContentHash().equals(event.getContentHash()));
+                }
+            }
+        }
 
-	private void emptyStackAndAddNewEvent(Event event)
-	{
-		processRemainingInStack();
+        return isAPossibleMoveOrRename;
+    }
 
-		if (lastLoggedEvent == null || lastLoggedEvent.isDirectoryEvent() == false
-		        || lastLoggedEvent.getEventType().equals(EventType.DEL) == false
-		        || event.getEventType().equals(EventType.DEL) == false
-		        || event.isUnderParent(lastLoggedEvent.getPath()) == false)
-		{
-			List<Event> dirEventHistory = new ArrayList<Event>();
-			dirEventHistory.add(event);
-			eventStack.push(dirEventHistory);
-		}
-	}
+    private boolean isAConsecutiveDirEvent(Event event)
+    {
+        return event.isDirectoryEvent() && eventStack.peek().get(0).isDirectoryEvent()
+                        && eventStack.peek().get(0).getEventType().equals(EventType.DEL);
+    }
+
 }

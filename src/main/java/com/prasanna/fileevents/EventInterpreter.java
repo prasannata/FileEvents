@@ -8,7 +8,7 @@ import java.util.Stack;
 
 /**
  * <p>
- * Given a list of events, based on the input sequence interprets the final
+ * Given a list of events, based on the input sequence, interprets the final
  * action for a particular file and logs it using the Logger.
  * </p>
  * 
@@ -23,13 +23,13 @@ import java.util.Stack;
  * </p>
  * 
  * <p>
- * <b>Added</b>: For a file, a add is interpreted as add if the previous event
+ * <b>Added</b>: For a file, an add is interpreted as add if the previous event
  * in the sequence was not a delete for the same file name or if the previous
- * delete share the same file contents.
+ * delete had the same file contents.
  * 
- * For a directory, a add is interpreted as add as long as it was not preceded
+ * For a directory, an add is interpreted as add as long as it was not preceded
  * immediately by delete of the same directory. (Immediate preceding events may
- * also include delete event of all the files and directory within the deleted
+ * also include delete event of all the files and directories within the deleted
  * directory.)
  * </p>
  * <p>

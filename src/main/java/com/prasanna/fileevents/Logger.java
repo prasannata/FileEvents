@@ -1,6 +1,7 @@
 package com.prasanna.fileevents;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -13,14 +14,12 @@ public class Logger
     private static int DETAILS_COLUMN_WIDTH = 51;
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd yyyy HH:mm:ss:SSS");
-    private PrintStream outputStream = System.out;
+    private PrintStream outputStream;
 
-    public Logger()
+    public Logger(OutputStream outputStream)
     {
         if (outputStream == null)
-        {
             throw new IllegalArgumentException("Cannot initialize logger with null output stream.");
-        }
 
     }
 

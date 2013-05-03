@@ -71,14 +71,13 @@ import java.util.Stack;
  */
 public class EventInterpreter
 {
-    private Stack<List<Event>> eventStack = new Stack<List<Event>>();
-
-    private static final Logger logger = new Logger();
-
-    private Event lastLoggedEvent = null;
+    private static final Logger logger = new Logger(System.out);
+    private Stack<List<Event>> eventStack;
+    private Event lastLoggedEvent;
 
     public EventInterpreter()
     {
+        eventStack = new Stack<List<Event>>();
         logger.printHeader();
     }
 
@@ -105,7 +104,7 @@ public class EventInterpreter
     {
         if (!eventStack.isEmpty())
         {
-            if (isAPossibleMoveOrRename(event))
+            if (isMoveOrRename(event))
             {
                 List<Event> dirEventHistory = eventStack.pop();
                 dirEventHistory.add(event);
@@ -115,9 +114,7 @@ public class EventInterpreter
                 emptyStackAndAddNewEvent(event);
         }
         else
-        {
             logger.prettyLog(event, Action.ADDED, event.getPath());
-        }
     }
 
     private void interpretDelEvent(Event event)
@@ -330,14 +327,10 @@ public class EventInterpreter
 
     private Action determineMoveOrRename(Event firstEvent, Event event)
     {
-        Action action;
-
         if (firstEvent.getParentPath().equals(event.getParentPath()))
-            action = Action.RENAMED;
+            return Action.RENAMED;
         else
-            action = Action.MOVED;
-
-        return action;
+            return Action.MOVED;
     }
 
     private Action getActionString(EventType eventType)
@@ -345,18 +338,18 @@ public class EventInterpreter
         return eventType.equals(EventType.ADD) ? Action.ADDED : Action.DELETED;
     }
 
-    public boolean isAPossibleMoveOrRename(Event event)
+    public boolean isMoveOrRename(Event event)
     {
-        boolean isAPossibleMoveOrRename = false;
+        boolean isMoveOrRename = false;
         int size = eventStack.peek().size();
 
         if (size > 0)
         {
             Event firstEvent = eventStack.peek().get(0);
 
-            isAPossibleMoveOrRename = isAConsecutiveDirEvent(event);
+            isMoveOrRename = isAConsecutiveDirEvent(event);
 
-            if (!isAPossibleMoveOrRename)
+            if (!isMoveOrRename)
             {
                 Event lastDirEvent = null;
 
@@ -377,19 +370,19 @@ public class EventInterpreter
                     for (Event historicalEvent : eventStack.peek())
                     {
                         if (historicalEvent.getContentHash().equals(event.getContentHash()))
-                            isAPossibleMoveOrRename = true;
+                            isMoveOrRename = true;
                     }
                 }
 
-                if (!isAPossibleMoveOrRename)
+                if (!isMoveOrRename)
                 {
-                    isAPossibleMoveOrRename = (!event.isDirectoryEvent() && !firstEvent.isDirectoryEvent() && firstEvent
+                    isMoveOrRename = (!event.isDirectoryEvent() && !firstEvent.isDirectoryEvent() && firstEvent
                                     .getContentHash().equals(event.getContentHash()));
                 }
             }
         }
 
-        return isAPossibleMoveOrRename;
+        return isMoveOrRename;
     }
 
     private boolean isAConsecutiveDirEvent(Event event)

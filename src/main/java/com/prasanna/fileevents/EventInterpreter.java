@@ -126,7 +126,7 @@ public class EventInterpreter
             emptyStackAndAddNewEvent(event);
         else
         {
-            if (eventStack.isEmpty() == false)
+            if (!eventStack.isEmpty())
             {
                 if (eventStack.peek().get(0).isDirectoryEvent()
                                 && eventStack.peek().get(0).getPath().equals(event.getParentPath()))
@@ -155,7 +155,7 @@ public class EventInterpreter
 
     private void processRemainingInStack()
     {
-        while (eventStack.isEmpty() == false)
+        while (!eventStack.isEmpty())
             detailEvent(eventStack.pop());
     }
 
@@ -309,7 +309,7 @@ public class EventInterpreter
                             break;
                         }
 
-                        if (deletedEvent.getPath().replaceFirst(oldDirPath, newDirPath).equals(event.getPath()) == false)
+                        if (!deletedEvent.getPath().replaceFirst(oldDirPath, newDirPath).equals(event.getPath()))
                         {
                             isADirOperation = false;
                             break;

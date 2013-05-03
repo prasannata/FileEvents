@@ -103,7 +103,7 @@ public class EventInterpreter
 
     private void interpretAddEvent(Event event)
     {
-        if (eventStack.isEmpty() == false)
+        if (!eventStack.isEmpty())
         {
             if (isAPossibleMoveOrRename(event))
             {
